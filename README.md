@@ -15,7 +15,7 @@ Follow these steps to get started with the Educational Content Enhancer:
 1. Clone the Repo
 Clone the repository to your local machine using:
 
-git clone https://github.com/yourusername/educational-content-enhancer.git
+git clone https://github.com/Manu6259/Educational-AI/
 
 
 2. Install Requirements
