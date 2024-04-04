@@ -7,7 +7,7 @@ import sys
 import csv
 import re
 
-def download_media_from_youtube(youtube_url, download_path=".", ffmpeg_path="/usr/bin/ffmpeg"):
+def download_media_from_youtube(youtube_url, download_path=".", ffmpeg_path="/usr/bin/ffmpeg"): #Enter the ffmpeg of your system
     audio_output_file = os.path.join(download_path, "audio11.wav")
     video_output_file = os.path.join(download_path, "video11.mp4")
     
@@ -43,6 +43,12 @@ def transcribe_audio_with_whisper(audio_file, model_size="base", language="Engli
         '--model', model_size
     ]
     subprocess.run(command)
+    audio_path = os.path.dirname(audio_file)
+    
+    srt_file_name = os.path.splitext(os.path.basename(audio_file))[0] + ".srt"
+    srt_file_path = os.path.join(audio_path, srt_file_name)
+    
+    return srt_file_path
 
 def transcription(youtube_url):
     print("Downloading media from YouTube...")
@@ -51,10 +57,10 @@ def transcription(youtube_url):
     print(f"Audio File: {audio_file}\nVideo File: {video_file}")
 
     print("Transcribing audio with Whisper...")
-    transcribe_audio_with_whisper(audio_file)
-
+    srt_path = transcribe_audio_with_whisper(audio_file)
+    
     print("Transcription completed.")
-
+    return srt_path
  
 def validate_file(file_path):
     """
@@ -105,6 +111,7 @@ def convert_srt_to_txt(file_path):
         content = read_srt(file_path)
         new_file_path = write_txt(content, file_path)
         print(f"Conversion successful. TXT file created at {new_file_path}")
+        return new_file_path
     except Exception as e:
         print(f"An error occurred: {e}")
 
@@ -163,9 +170,13 @@ def summarized_text(file_path, output_file_path):
     then writes the activities to a specified text file.
     """
     transcript = read_transcript_from_file(file_path)
+    input_dir = os.path.dirname(file_path)
+    output_path = os.path.join(input_dir, output_file_path)
     activities = generate_learning_activities(transcript)
-    write_output_to_file(activities, output_file_path)
+    write_output_to_file(activities, output_path)
     print(f"Suggested Learning Activities written to {output_file_path}")
+    return output_path
+
 
 
 def parse_chapter_info_from_file(input_file_path):
@@ -202,50 +213,45 @@ def write_to_csv(chapters, output_path):
                 'Chapter Description': chapter[4],
                 'Chapter Question': chapter[5]
             })
+    
 
-def main():
+def output_csv(text_summary_path):
     # The path to the input file uploaded by the user
-    input_file_path = 'learning_activities.txt'  # This will be replaced by the path of the uploaded file
+    # input_file_path = 'learning_activities.txt'  # This will be replaced by the path of the uploaded file
     
     # Parse the chapter information from the file
-    chapters = parse_chapter_info_from_file(input_file_path)
+    chapters = parse_chapter_info_from_file(text_summary_path)
     
     # Specify the path to save the output CSV file
-    output_csv_path = 'chapter_details_from_file.csv'
-    
+
+    csv_path = 'chapter_details_from_file.csv'
+    text_summary_dir = os.path.dirname(text_summary_path)
+    output_csv_path = os.path.join(text_summary_dir, csv_path)
     # Write the chapter information to a CSV file
     write_to_csv(chapters, output_csv_path)
     
     # Output the path to the created CSV file
     return output_csv_path
 
-# Run the main function and get the path to the output CSV file
-
-
-# Read the CSV file
 
 
 
 if __name__ == "__main__":
     # Creating the transcript
     youtube_url = input("Enter the YouTube URL: ")
-    transcription(youtube_url)
+    subtitle_file_path = transcription(youtube_url)
 
     # Converting .srt to text file
-    if len(sys.argv) > 1:
-        input_file_path = sys.argv[1]
-    else:
-        input_file_path = input("Please enter the path to the SRT file: ")
-    convert_srt_to_txt(input_file_path)
+    text_file_path = convert_srt_to_txt(subtitle_file_path)
 
     #Calling OpenAI
-    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-    file_path = "audio11.txt"  # Path to your transcript file
+    api_key = "your-api-key" #Enter your api key here
+    client = OpenAI(api_key=api_key)
     output_file_path = "learning_activities.txt"  # Desired path for the output file
-    summarized_text(file_path, output_file_path)
+    text_summary_path = summarized_text(text_file_path, output_file_path)
 
     # Run the main function and get the path to the output CSV file
-    output_csv_file_path = main()
+    output_csv_file_path = output_csv(text_summary_path)
 
 
     data = pd.read_csv(output_csv_file_path)
